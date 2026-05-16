@@ -1,0 +1,33 @@
+{
+  "name": "dino-outpost-ai-showcase",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "smoke": "playwright test --grep-invert regression-capture",
+    "regression:capture": "playwright test --grep regression-capture",
+    "regression:report": "node scripts/regression-compare.mjs",
+    "regression:baseline": "rm -rf test-results/regression/baseline && cp -R test-results/regression/current test-results/regression/baseline && echo 'Baseline updated.'",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@babylonjs/core": "^8.38.0",
+    "@babylonjs/loaders": "^8.56.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.57.0",
+    "@typescript-eslint/parser": "^8.59.3",
+    "eslint": "^9.39.1",
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.7",
+    "vitest": "^4.0.15"
+  }
+}

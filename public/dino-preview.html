@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dino Model Preview</title>
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #101513;
+        color: #e8ece8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 50% -10%, rgba(105, 146, 108, 0.34), transparent 42%),
+          linear-gradient(180deg, #121b16 0%, #0d1110 100%);
+      }
+
+      main {
+        width: min(1320px, calc(100vw - 40px));
+        margin: 0 auto;
+        padding: 28px 0 34px;
+      }
+
+      h1 {
+        margin: 0 0 18px;
+        font-size: 28px;
+        font-weight: 780;
+        letter-spacing: 0;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .tile {
+        overflow: hidden;
+        border: 1px solid rgba(232, 236, 232, 0.16);
+        border-radius: 8px;
+        background: linear-gradient(180deg, rgba(234, 238, 227, 0.08), rgba(15, 20, 18, 0.92));
+        box-shadow: 0 18px 55px rgba(0, 0, 0, 0.32);
+      }
+
+      model-viewer {
+        width: 100%;
+        height: 310px;
+        background:
+          linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+          radial-gradient(circle at 50% 72%, rgba(134, 157, 108, 0.28), transparent 35%),
+          #182019;
+        background-size:
+          32px 32px,
+          32px 32px,
+          auto,
+          auto;
+      }
+
+      .label {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 11px 13px 13px;
+        border-top: 1px solid rgba(232, 236, 232, 0.1);
+      }
+
+      strong {
+        font-size: 16px;
+      }
+
+      span {
+        color: #aeb9ae;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      @media (max-width: 820px) {
+        .grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        model-viewer {
+          height: 260px;
+        }
+      }
+
+      @media (max-width: 520px) {
+        main {
+          width: calc(100vw - 24px);
+          padding-top: 18px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Dino Outpost Dinosaur GLB Preview</h1>
+      <section class="grid" aria-label="Dinosaur model preview grid">
+        <article class="tile">
+          <model-viewer
+            src="/assets/models/quaternius/animated-dinosaur-bundle/T-Rex.glb"
+            camera-controls
+            auto-rotate
+            shadow-intensity="0.9"
+            exposure="1.1"
+            camera-orbit="35deg 70deg auto"
+          ></model-viewer>
+          <div class="label"><strong>T-Rex</strong><span>Boss / heavy threat</span></div>
+        </article>
+        <article class="tile">
+          <model-viewer
+            src="/assets/models/quaternius/animated-dinosaur-bundle/Velociraptor.glb"
+            camera-controls
+            auto-rotate
+            shadow-intensity="0.9"
+            exposure="1.1"
+            camera-orbit="35deg 70deg auto"
+          ></model-viewer>
+          <div class="label"><strong>Velociraptor</strong><span>Fast runner</span></div>
+        </article>
+        <article class="tile">
+          <model-viewer
+            src="/assets/models/quaternius/animated-dinosaur-bundle/Triceratops.glb"
+            camera-controls
+            auto-rotate
+            shadow-intensity="0.9"
+            exposure="1.1"
+            camera-orbit="35deg 70deg auto"
+          ></model-viewer>
+          <div class="label"><strong>Triceratops</strong><span>Armored brute</span></div>
+        </article>
+        <article class="tile">
+          <model-viewer
+            src="/assets/models/quaternius/animated-dinosaur-bundle/Stegosaurus.glb"
+            camera-controls
+            auto-rotate
+            shadow-intensity="0.9"
+            exposure="1.1"
+            camera-orbit="35deg 70deg auto"
+          ></model-viewer>
+          <div class="label"><strong>Stegosaurus</strong><span>Wide silhouette</span></div>
+        </article>
+        <article class="tile">
+          <model-viewer
+            src="/assets/models/quaternius/animated-dinosaur-bundle/Apatosaurus.glb"
+            camera-controls
+            auto-rotate
+            shadow-intensity="0.9"
+            exposure="1.1"
+            camera-orbit="35deg 70deg auto"
+          ></model-viewer>
+          <div class="label"><strong>Apatosaurus</strong><span>Huge slow target</span></div>
+        </article>
+        <article class="tile">
+          <model-viewer
+            src="/assets/models/quaternius/animated-dinosaur-bundle/Parasaurolophus.glb"
+            camera-controls
+            auto-rotate
+            shadow-intensity="0.9"
+            exposure="1.1"
+            camera-orbit="35deg 70deg auto"
+          ></model-viewer>
+          <div class="label"><strong>Parasaurolophus</strong><span>Medium herd unit</span></div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

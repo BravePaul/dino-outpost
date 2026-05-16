@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dino Habitat GLB Preview</title>
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #111512;
+        color: #edf1eb;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 30% -15%, rgba(105, 132, 83, 0.36), transparent 38%),
+          radial-gradient(circle at 80% 20%, rgba(73, 92, 88, 0.3), transparent 30%),
+          linear-gradient(180deg, #151d17 0%, #0c100e 100%);
+      }
+
+      main {
+        width: min(1460px, calc(100vw - 40px));
+        margin: 0 auto;
+        padding: 28px 0 36px;
+      }
+
+      header {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 780;
+        letter-spacing: 0;
+      }
+
+      .meta {
+        color: #aeb9ae;
+        font-size: 13px;
+        text-align: right;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .tile {
+        overflow: hidden;
+        border: 1px solid rgba(237, 241, 235, 0.14);
+        border-radius: 8px;
+        background: linear-gradient(180deg, rgba(237, 241, 235, 0.07), rgba(12, 16, 14, 0.95));
+        box-shadow: 0 18px 52px rgba(0, 0, 0, 0.33);
+      }
+
+      model-viewer {
+        width: 100%;
+        height: 260px;
+        background:
+          linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+          radial-gradient(circle at 50% 72%, rgba(118, 137, 95, 0.22), transparent 40%),
+          #172018;
+        background-size:
+          28px 28px,
+          28px 28px,
+          auto,
+          auto;
+      }
+
+      .label {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: 54px;
+        padding: 10px 12px;
+        border-top: 1px solid rgba(237, 241, 235, 0.1);
+      }
+
+      strong {
+        font-size: 15px;
+        line-height: 1.2;
+      }
+
+      span {
+        color: #aeb9ae;
+        font-size: 12px;
+        line-height: 1.2;
+        text-align: right;
+      }
+
+      @media (max-width: 1100px) {
+        .grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 760px) {
+        .grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        header {
+          display: block;
+        }
+
+        .meta {
+          margin-top: 6px;
+          text-align: left;
+        }
+      }
+
+      @media (max-width: 520px) {
+        main {
+          width: calc(100vw - 24px);
+          padding-top: 18px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Dino Habitat GLB Preview</h1>
+        <div class="meta">Poly Haven CC0, 1K textures, converted to GLB</div>
+      </header>
+      <section class="grid" aria-label="Habitat model preview grid">
+        <article class="tile">
+          <model-viewer src="/assets/models/polyhaven/dino-habitat/mountainside.glb" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" interaction-prompt="none"></model-viewer>
+          <div class="label"><strong>Mountainside</strong><span>Background mountain</span></div>
+        </article>
+        <article class="tile">
+          <model-viewer src="/assets/models/polyhaven/dino-habitat/rock_face_01.glb" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" interaction-prompt="none"></model-viewer>
+          <div class="label"><strong>Rock Face 01</strong><span>Cliff wall</span></div>
+        </article>
+        <article class="tile">
+          <model-viewer src="/assets/models/polyhaven/dino-habitat/rock_face_02.glb" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" interaction-prompt="none"></model-viewer>
+          <div class="label"><strong>Rock Face 02</strong><span>Alternate cliff</span></div>
+        </article>
+        <article class="tile">
+          <model-viewer src="/assets/models/polyhaven/dino-habitat/boulder_01.glb" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" interaction-prompt="none"></model-viewer>
+          <div class="label"><strong>Boulder 01</strong><span>Foreground rock</span></div>
+        </article>
+        <article class="tile">
+          <model-viewer src="/assets/models/polyhaven/dino-habitat/rock_09.glb" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" interaction-prompt="none"></model-viewer>
+          <div class="label"><strong>Rock 09</strong><span>Terrain rock</span></div>
+        </article>
+        <article class="tile">
+          <model-viewer src="/assets/models/polyhaven/dino-habitat/rock_moss_set_01.glb" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" interaction-prompt="none"></model-viewer>
+          <div class="label"><strong>Rock Moss Set</strong><span>Mossy stones</span></div>
+        </article>
+        <article class="tile">
+          <model-viewer src="/assets/models/polyhaven/dino-habitat/tree_stump_01.glb" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" interaction-prompt="none"></model-viewer>
+          <div class="label"><strong>Tree Stump</strong><span>Forest floor</span></div>
+        </article>
+        <article class="tile">
+          <model-viewer src="/assets/models/polyhaven/dino-habitat/dead_tree_trunk.glb" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" interaction-prompt="none"></model-viewer>
+          <div class="label"><strong>Dead Tree Trunk</strong><span>Fallen trunk</span></div>
+        </article>
+        <article class="tile">
+          <model-viewer src="/assets/models/polyhaven/dino-habitat/fern_02.glb" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" interaction-prompt="none"></model-viewer>
+          <div class="label"><strong>Fern 02</strong><span>Undergrowth</span></div>
+        </article>
+        <article class="tile">
+          <model-viewer src="/assets/models/polyhaven/dino-habitat/shrub_04.glb" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" interaction-prompt="none"></model-viewer>
+          <div class="label"><strong>Shrub 04</strong><span>Bush cover</span></div>
+        </article>
+        <article class="tile">
+          <model-viewer src="/assets/models/polyhaven/dino-habitat/grass_bermuda_01.glb" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" interaction-prompt="none"></model-viewer>
+          <div class="label"><strong>Grass Bermuda</strong><span>Grass patch</span></div>
+        </article>
+        <article class="tile">
+          <model-viewer src="/assets/models/polyhaven/dino-habitat/moss_01.glb" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" interaction-prompt="none"></model-viewer>
+          <div class="label"><strong>Moss 01</strong><span>Ground cover</span></div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
