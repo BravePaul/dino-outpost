@@ -12,6 +12,28 @@ Large binary assets (3D models, textures) are excluded from this repo to keep cl
 - `public/assets/hdris/blue_grotto_1k.hdr` — Poly Haven HDR skybox (kept because small + central to atmosphere)
 - `public/reference-images/*.png` — visual reference targets used by `docs/VISUAL_REFERENCES.md`
 
+## First-person weapons
+
+After iter 31 the weapon rig uses real GLB rifles instead of procedural geometry. They live at `public/assets/models/polypizza/weapons/`:
+
+| File | Source | Used for | License |
+|---|---|---|---|
+| `sniper_quaternius.glb` | Quaternius Ultimate Guns Pack (via Poly Pizza) | `marksman` slot | CC0 |
+| `sniper_quaternius_alt.glb` | Same pack | `carbine` slot | CC0 |
+| `kar98k.glb` | AdamKokrito on Poly Pizza ([page](https://poly.pizza/m/ntijptIGIw)) | `shotgun` slot | **CC-BY 3.0** — attribution required, see README |
+
+Direct download URLs (already used by the project to fetch them):
+
+```bash
+mkdir -p public/assets/models/polypizza/weapons
+cd public/assets/models/polypizza/weapons
+curl -L -o sniper_quaternius.glb     https://static.poly.pizza/f03e21b7-e3b7-49fd-b47d-d1908649fcee.glb
+curl -L -o sniper_quaternius_alt.glb https://static.poly.pizza/d9962f20-fdce-42a5-81c8-2847a4487447.glb
+curl -L -o kar98k.glb                https://static.poly.pizza/398c925f-879e-403e-a6a5-108c6c37ed7c.glb
+```
+
+Without these GLBs, the game falls back to the procedural box-rifle (visibility toggled inside `loadWeaponGlbs`).
+
 ## Sources
 
 ### Quaternius (CC0)

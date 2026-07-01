@@ -6,6 +6,7 @@ playwright-report/
 .DS_Store
 .env
 .env.*
+.claude/
 
 # Large redownloadable assets — see docs/ASSETS.md for sources.
 public/assets/models/

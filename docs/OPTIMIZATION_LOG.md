@@ -7,6 +7,107 @@
 
 ---
 
+## §31 — Realistic GLB Weapons (2026-05-17, iter 31)
+
+**问题（来自用户反馈）**：枪模型是程序化盒子拼出来的，再怎么细分也像 placeholder。
+
+**搜索 + 下载**：通过 sub-agent 搜了 Poly Pizza / Quaternius 等免费 3D 模型站，选了 3 把：
+
+| 武器槽 | 文件 | 来源 | 协议 |
+|---|---|---|---|
+| marksman | `sniper_quaternius.glb` | Quaternius Ultimate Guns Pack | CC0 |
+| carbine | `sniper_quaternius_alt.glb` | Quaternius Ultimate Guns Pack | CC0 |
+| shotgun | `kar98k.glb` | AdamKokrito on Poly Pizza | CC-BY 3.0（需署名） |
+
+下载到 `public/assets/models/polypizza/weapons/`，未纳入 git（在 `docs/ASSETS.md` 注明）。
+
+**接入实现**
+
+- `createWeaponRig()` 末尾启动 `loadWeaponGlbs(root)` 异步加载。
+- 加载完成后 `applyWeaponVisual()` 切换显示：GLB 容器逐个 `setEnabled(true/false)`，同时把程序化几何 `isVisible=false`。GLB 加载失败时自动 fallback 到程序化。
+- 一次性写了一份 `tests/playwright/inspect-weapon.spec.ts`（用完即删）抓 console.log 输出 bounding box，确认了三个模型的原生尺寸（marksman X=7.29 Y=1.48 Z=0.46，barrel 沿 -X 轴）。
+
+**关键的两个坑**
+
+1. **`mesh.setParent(container)` 会保留世界变换**——会把 container 上的 rotation/scale 反向写进 mesh.local 来补偿，结果旋转/缩放完全不起作用。
+2. 解决：用 **inner/outer 两层 TransformNode** 结构：
+   - `outer`（容器，承载 `pos/rot/scale`）—— 直接当 `weaponGlbContainers[id]`
+   - `inner`（仅承载 bounds-centering 偏移，无 rotation/scale）
+   - 用 `mesh.parent = inner`（直接赋值，**不要** setParent）把 GLB 网格挂上去
+3. 旋转 `rot.y = π/2` 把模型自然 -X-forward 转到 Babylon +Z-forward。
+
+**关键文件**
+
+- `src/app/Game.ts`：
+  - 字段 `weaponGlbContainers: Partial<Record<WeaponId, TransformNode>>`、`weaponGlbLoaded`
+  - 新方法 `loadWeaponGlbs(root)`
+  - `applyWeaponVisual()` 分支：GLB 已加载时直接走容器 enable 切换
+- `public/assets/models/polypizza/weapons/{sniper_quaternius,sniper_quaternius_alt,kar98k}.glb`
+- `.gitignore` 已 cover（`public/assets/models/` 全排除）。`docs/ASSETS.md` 加了下载源说明。
+
+**风险 / 已知局限**
+
+- Per-weapon 的 pos/rot/scale 是手调的，对其他枪 GLB（不同 pivot/scale）要重新校准。
+- Kar98k 是 CC-BY 3.0，**用了就要署名**。下面"署名"段已加。
+- 武器朝向计算只用了 Babylon Y 轴旋转；若以后换的 GLB 是 +Y up 但 barrel 沿别的轴，要复用 inspect-weapon spec 重新测。
+
+**Attribution**
+
+- Kar98k 模型来自 **AdamKokrito**（Poly Pizza, CC-BY 3.0）。
+
+---
+
+## §30 — Camera Shake on Combat Events (2026-05-17, iter 30)
+
+**问题**：开火 / 命中 / 击杀 时屏幕完全不动，反馈缺一层"重量感"。
+
+**改了什么**
+
+- 新增字段 `cameraShakeSeconds`、`cameraShakeAmplitude`，新增方法 `triggerCameraShake(amplitude, seconds)`。
+- 在 `updatePlayerMovement()` 末尾叠加 shake 偏移到 `camera.position`：每帧 `(rand-0.5) * amplitude * (remainingSec/0.25)` 加到 x/y。
+- `triggerCameraShake` 实现"取最大"叠加：多事件并发时，最强的那个胜出。
+- 接入点：
+  - **每发开火**：`fire()` 里按武器类型分级：shotgun 0.045 / marksman 0.028 / carbine 0.018，scope 状态下 ×0.4。
+  - **击杀**：`fire()` 命中 + killed 分支：crit 0.06 / heavy 0.05 / 普通 0.035，持续 0.22s。
+
+**关键文件**
+
+- `src/app/Game.ts` — `updatePlayerMovement()`（shake 叠加到位置）、`triggerCameraShake()`、`fire()`（开火和击杀调用点）。
+
+**风险**
+
+- 持续时间用 `Math.max(remainingSec, newSec)` 而非 reset；连发时不会被重置成 0.25 重新计时，但前一次没结束时新一次的振幅可能没起作用（取 max amplitude * remaining phase）。如果需要"每次开火都振幅满血"，改成 `Math.max` 但用单独的 `currentAmp` 计算。
+- 不影响 pitch/yaw，纯位置抖动；FPS 抖动派系两种风格都常见，当前是"温和派"。
+
+---
+
+## §29 — Movement Feel (2026-05-17, iter 29)
+
+**问题**：移动是直接位移没有惯性，bob 太弱（0.025），没有横移倾斜。
+
+**改了什么**
+
+完全重写 `updatePlayerMovement()`：
+
+1. **速度平滑**：新字段 `playerVelocity = new Vector3()`，每帧 `vel.x += (target_vx - vel.x) * dt * accelRate`，其中 `accelRate = 14`（有输入）或 `9`（松开按键，更慢减速 → 不至于像踩刹车）。
+2. **步态化 bob**：
+   - 频率 `movementBob += dt * (0.6 + actualSpeed * 3.6)`——静止时也有 0.6 rad/s 微呼吸；运动时按速度加速。
+   - 垂直 bob = `sin(movementBob) * 0.04 * bobScale + sin(movementBob * 0.32) * 0.006`（步频 + 慢呼吸双层）。
+   - 横向 bob = `sin(movementBob * 0.5) * 0.022 * bobScale`（半频，模拟一步左一步右）。
+3. **横移倾斜（camera roll）**：新字段 `cameraRoll`，每帧 lerp 到 `-(vel.x / targetSpeed) * 0.04`（最大 ±2.3°），赋给 `camera.rotation.z`。
+4. **保留**：移动边界（x ±3.2、z [-1.35, 1.85]）、scope 减速（1.2 vs 3.2）。
+
+**关键文件**
+
+- `src/app/Game.ts` — `updatePlayerMovement()`、新字段 `playerVelocity`/`cameraRoll`。
+
+**风险 / 已知局限**
+
+- camera.rotation.z 在某些 Babylon 版本和 PostProcess 配合时会让 vignette/scope 一起 roll，目测无问题。
+- 静止呼吸 bob 是 0.6 rad/s 持续累积，长时间会让 `movementBob` 累加到大数，最终精度损失。可以模 2π 但 60fps 下 28 小时才会到 64-bit 浮点精度问题，先不管。
+
+---
+
 ## §28 — Hit Burst Polish (2026-05-16, iter 28)
 
 **问题（来自分析 F3）**：命中爆点已有 flash + sparks + ring，但缺一个"火药感"的烟雾尾迹，整个反馈消失得太快。

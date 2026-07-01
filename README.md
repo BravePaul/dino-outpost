@@ -66,6 +66,15 @@ Each accepted change has a one-line entry in `docs/ITERATION_BRIEF.md`'s history
 
 Large binary assets (3D models, ground textures) are excluded from this repo to keep clone size manageable. See `docs/ASSETS.md` for download sources (all CC0 from Quaternius and Poly Haven). The game will run without them, but the scene will look bare.
 
+## Credits
+
+Bundled / linked 3D assets are CC0 unless noted:
+
+- Dinosaur models, nature kit, survival pack, medieval village pack, sci-fi gun pack — [Quaternius](https://quaternius.com/) (CC0)
+- Habitat plants, rocks, structures, HDR skybox — [Poly Haven](https://polyhaven.com/) (CC0)
+- Sniper rifle GLBs (carbine / marksman) — Quaternius Ultimate Guns Pack via [Poly Pizza](https://poly.pizza/) (CC0)
+- **Kar98k shotgun model — [AdamKokrito](https://poly.pizza/m/ntijptIGIw) on Poly Pizza (CC-BY 3.0)**
+
 ## License
 
 Code is open for personal / educational reference. No commercial use of bundled reference images.

@@ -75,12 +75,13 @@ interface WeaponRigParts {
 }
 
 const expandedWaves = flattenedWaves(tuning.waves);
-const habitatRootUrl = "/assets/models/polyhaven/dino-habitat/";
-const polyhavenUpgradeRootUrl = "/assets/models/polyhaven/game-upgrade/";
-const dinoRootUrl = "/assets/models/quaternius/animated-dinosaur-bundle/";
-const natureKitRootUrl = "/assets/models/quaternius/stylized-nature-megakit/";
-const survivalKitRootUrl = "/assets/models/quaternius/survival-pack/";
-const medievalKitRootUrl = "/assets/models/quaternius/medieval-village-pack/";
+const assetUrl = (path: string) => `${import.meta.env.BASE_URL}${path}`;
+const habitatRootUrl = assetUrl("assets/models/polyhaven/dino-habitat/");
+const polyhavenUpgradeRootUrl = assetUrl("assets/models/polyhaven/game-upgrade/");
+const dinoRootUrl = assetUrl("assets/models/quaternius/animated-dinosaur-bundle/");
+const natureKitRootUrl = assetUrl("assets/models/quaternius/stylized-nature-megakit/");
+const survivalKitRootUrl = assetUrl("assets/models/quaternius/survival-pack/");
+const medievalKitRootUrl = assetUrl("assets/models/quaternius/medieval-village-pack/");
 
 export class DinoOutpostGame {
   private readonly engine: Engine;
@@ -102,11 +103,17 @@ export class DinoOutpostGame {
   private weaponKickSeconds = 0;
   private weaponRoot?: TransformNode;
   private weaponParts?: WeaponRigParts;
+  private weaponGlbContainers: Partial<Record<WeaponId, TransformNode>> = {};
+  private weaponGlbLoaded = false;
   private minimapBlipNodes = new Map<number, HTMLElement>();
   private currentAimTarget?: AimTarget;
   private readonly moveKeys = new Set<string>();
   private readonly cameraHome = new Vector3(0, 2.25, -14);
   private playerOffset = new Vector3(0, 0, 0);
+  private playerVelocity = new Vector3(0, 0, 0);
+  private cameraRoll = 0;
+  private cameraShakeSeconds = 0;
+  private cameraShakeAmplitude = 0;
   private movementBob = 0;
   private audio?: AudioContext;
   private richHabitatLoaded = false;
@@ -336,7 +343,7 @@ export class DinoOutpostGame {
     this.scene.imageProcessingConfiguration.exposure = 1.08;
     this.scene.imageProcessingConfiguration.toneMappingEnabled = true;
 
-    const sky = new PhotoDome("blue-grotto-hdri-dome", "/assets/hdris/polyhaven/blue_grotto_tonemapped.jpg", {
+    const sky = new PhotoDome("blue-grotto-hdri-dome", assetUrl("assets/hdris/polyhaven/blue_grotto_tonemapped.jpg"), {
       resolution: 32,
       size: 1000,
     }, this.scene);
@@ -346,8 +353,8 @@ export class DinoOutpostGame {
     const ground = MeshBuilder.CreateGround("wet-jungle-ground", { width: 64, height: 96, subdivisions: 24 }, this.scene);
     ground.material = this.createTexturedGroundMaterial(
       "ground-material",
-      "/assets/textures/polyhaven/dino-habitat/brown_mud_leaves_01/brown_mud_leaves_01_diff_1k.jpg",
-      "/assets/textures/polyhaven/dino-habitat/brown_mud_leaves_01/brown_mud_leaves_01_nor_gl_1k.jpg",
+      assetUrl("assets/textures/polyhaven/dino-habitat/brown_mud_leaves_01/brown_mud_leaves_01_diff_1k.jpg"),
+      assetUrl("assets/textures/polyhaven/dino-habitat/brown_mud_leaves_01/brown_mud_leaves_01_nor_gl_1k.jpg"),
       8,
       12,
     );
@@ -677,14 +684,112 @@ export class DinoOutpostGame {
       sight,
     };
     this.applyWeaponVisual();
+    void this.loadWeaponGlbs(root);
+  }
+
+  private async loadWeaponGlbs(root: TransformNode): Promise<void> {
+    // Each weapon gets a real rifle GLB layered over the procedural rig.
+    // Per-weapon transform compensates for varying GLB pivots/orientations from Poly Pizza.
+    // Each GLB is bounds-centered (XZ centroid + Y bottom) into its container so the container
+    // position controls where the visible body sits. rot.y = π/2 turns the Quaternius pack's
+    // native -X-forward into Babylon's +Z-forward.
+    // Per inspect-weapon spec: model native sizes (X extent / Y / Z):
+    //   marksman 7.29 / 1.48 / 0.46 — barrel along -X
+    //   carbine  7.24 / 1.20 / 0.45 — barrel along -X
+    //   shotgun  11.82 / 2.51 / 1.26 — barrel along -X (Kar98k is biggest natively)
+    // rot.y = π/2 turns model's -X-forward into Babylon's +Z-forward.
+    // Scales pick visible rifle ~0.5–0.9 units long after weaponRoot.scaling=0.68.
+    const configs: Record<WeaponId, { file: string; pos: Vector3; rot: Vector3; scale: number }> = {
+      marksman: {
+        file: "sniper_quaternius.glb",
+        pos: new Vector3(-0.05, 0.05, 0.4),
+        rot: new Vector3(0, Math.PI / 2, 0),
+        scale: 0.45,
+      },
+      carbine: {
+        file: "sniper_quaternius_alt.glb",
+        pos: new Vector3(-0.05, 0.05, 0.4),
+        rot: new Vector3(0, Math.PI / 2, 0),
+        scale: 0.45,
+      },
+      shotgun: {
+        file: "kar98k.glb",
+        pos: new Vector3(-0.05, 0.1, 0.4),
+        rot: new Vector3(0, Math.PI / 2, 0),
+        scale: 0.26,
+      },
+    };
+    const rootUrl = assetUrl("assets/models/polypizza/weapons/");
+    await Promise.all(
+      (Object.entries(configs) as Array<[WeaponId, (typeof configs)[WeaponId]]>).map(async ([id, cfg]) => {
+        try {
+          const result = await SceneLoader.ImportMeshAsync("", rootUrl, cfg.file, this.scene);
+          // Outer node carries all the controlled transforms (pos / rot / scale).
+          const outer = new TransformNode(`weapon-glb-${id}`, this.scene);
+          outer.parent = root;
+          outer.position = cfg.pos;
+          outer.rotation = cfg.rot;
+          outer.scaling = new Vector3(cfg.scale, cfg.scale, cfg.scale);
+          // Inner node carries ONLY the bounds-centering offset, no rotation/scale.
+          // Direct `mesh.parent = inner` (NOT setParent) keeps the glTF loader's natural local
+          // transform and lets the outer's rotation/scale apply cleanly without compensation.
+          const inner = new TransformNode(`weapon-glb-inner-${id}`, this.scene);
+          inner.parent = outer;
+          const bounds = this.getImportedBounds(result.meshes);
+          if (bounds) {
+            inner.position = new Vector3(
+              -(bounds.min.x + bounds.max.x) / 2,
+              -(bounds.min.y + bounds.max.y) / 2,
+              -(bounds.min.z + bounds.max.z) / 2,
+            );
+          }
+          result.meshes.forEach((mesh) => {
+            if (!mesh.parent) {
+              mesh.parent = inner;
+            }
+            mesh.isPickable = false;
+          });
+          result.animationGroups.forEach((g) => g.stop());
+          this.weaponGlbContainers[id] = outer;
+          outer.setEnabled(false);
+        } catch (error) {
+          console.warn(`Failed to load weapon GLB ${cfg.file}`, error);
+        }
+      }),
+    );
+    if (Object.keys(this.weaponGlbContainers).length === 0) {
+      return;
+    }
+    this.weaponGlbLoaded = true;
+    // Hide procedural meshes now that real GLBs are available.
+    if (this.weaponParts) {
+      const parts = this.weaponParts;
+      [parts.receiver, parts.barrel, parts.muzzle, parts.handguard, parts.stock, parts.magazine, parts.scopeBody, parts.scopeFront, parts.scopeLens, parts.sight]
+        .forEach((m) => { m.isVisible = false; });
+      root.getChildMeshes().forEach((m) => {
+        if (m.name.startsWith("weapon-support") || m.name === "weapon-trigger-hand") {
+          m.isVisible = false;
+        }
+      });
+    }
+    this.applyWeaponVisual();
   }
 
   private applyWeaponVisual(): void {
+    const id = this.weapon.id;
+
+    // GLB rifles: swap which container is enabled. Procedural rig stays hidden.
+    if (this.weaponGlbLoaded) {
+      (Object.entries(this.weaponGlbContainers) as Array<[WeaponId, TransformNode]>).forEach(([glbId, container]) => {
+        container.setEnabled(glbId === id);
+      });
+      return;
+    }
+
     if (!this.weaponParts) {
       return;
     }
     const parts = this.weaponParts;
-    const id = this.weapon.id;
     const hasScope = id !== "shotgun";
 
     parts.scopeBody.isVisible = hasScope;
@@ -1213,35 +1318,61 @@ export class DinoOutpostGame {
   }
 
   private updatePlayerMovement(deltaSeconds: number): void {
-    let x = 0;
-    let z = 0;
-    if (this.moveKeys.has("KeyA") || this.moveKeys.has("ArrowLeft")) {
-      x -= 1;
+    let inputX = 0;
+    let inputZ = 0;
+    if (this.moveKeys.has("KeyA") || this.moveKeys.has("ArrowLeft")) inputX -= 1;
+    if (this.moveKeys.has("KeyD") || this.moveKeys.has("ArrowRight")) inputX += 1;
+    if (this.moveKeys.has("KeyW") || this.moveKeys.has("ArrowUp")) inputZ += 1;
+    if (this.moveKeys.has("KeyS") || this.moveKeys.has("ArrowDown")) inputZ -= 1;
+    const inputLen = Math.hypot(inputX, inputZ);
+
+    const targetSpeed = this.weapon.isScoped ? 1.2 : 3.2;
+    let targetVx = 0;
+    let targetVz = 0;
+    if (inputLen > 0) {
+      targetVx = (inputX / inputLen) * targetSpeed;
+      targetVz = (inputZ / inputLen) * targetSpeed;
     }
-    if (this.moveKeys.has("KeyD") || this.moveKeys.has("ArrowRight")) {
-      x += 1;
-    }
-    if (this.moveKeys.has("KeyW") || this.moveKeys.has("ArrowUp")) {
-      z += 1;
-    }
-    if (this.moveKeys.has("KeyS") || this.moveKeys.has("ArrowDown")) {
-      z -= 1;
-    }
-    const length = Math.hypot(x, z);
-    if (length > 0) {
-      const speed = this.weapon.isScoped ? 1.15 : 3.1;
-      this.playerOffset.x = Math.max(-3.2, Math.min(3.2, this.playerOffset.x + (x / length) * speed * deltaSeconds));
-      this.playerOffset.z = Math.max(-1.35, Math.min(1.85, this.playerOffset.z + (z / length) * speed * deltaSeconds));
-      this.movementBob += deltaSeconds * speed * 5.2;
-    } else {
-      this.movementBob += (0 - this.movementBob) * Math.min(1, deltaSeconds * 5);
-    }
-    const bob = length > 0 ? Math.sin(this.movementBob) * 0.025 : 0;
+    // Asymmetric ease: faster to start moving than to stop — feels deliberate, not floaty.
+    const accelRate = inputLen > 0 ? 14 : 9;
+    const accelLerp = Math.min(1, deltaSeconds * accelRate);
+    this.playerVelocity.x += (targetVx - this.playerVelocity.x) * accelLerp;
+    this.playerVelocity.z += (targetVz - this.playerVelocity.z) * accelLerp;
+
+    this.playerOffset.x = Math.max(-3.2, Math.min(3.2, this.playerOffset.x + this.playerVelocity.x * deltaSeconds));
+    this.playerOffset.z = Math.max(-1.35, Math.min(1.85, this.playerOffset.z + this.playerVelocity.z * deltaSeconds));
+
+    const actualSpeed = Math.hypot(this.playerVelocity.x, this.playerVelocity.z);
+    const bobScale = Math.min(1, actualSpeed / targetSpeed);
+    // Step cycle frequency tied to speed; 2 steps/sec at full run.
+    this.movementBob += deltaSeconds * (0.6 + actualSpeed * 3.6);
+    // Vertical bob = step frequency; lateral bob = half (one sway per 2 steps).
+    const bobY = Math.sin(this.movementBob) * 0.04 * bobScale + Math.sin(this.movementBob * 0.32) * 0.006;
+    const bobX = Math.sin(this.movementBob * 0.5) * 0.022 * bobScale;
+
+    // Camera shake driven by combat events (fire / hit / kill).
+    this.cameraShakeSeconds = Math.max(0, this.cameraShakeSeconds - deltaSeconds);
+    const shakePhase = this.cameraShakeSeconds > 0 ? this.cameraShakeSeconds / 0.25 : 0;
+    const shake = this.cameraShakeAmplitude * shakePhase;
+    const shakeX = shake > 0 ? (Math.random() - 0.5) * shake : 0;
+    const shakeY = shake > 0 ? (Math.random() - 0.5) * shake : 0;
+
     this.camera.position = new Vector3(
-      this.cameraHome.x + this.playerOffset.x,
-      this.cameraHome.y + bob,
+      this.cameraHome.x + this.playerOffset.x + bobX + shakeX,
+      this.cameraHome.y + bobY + shakeY,
       this.cameraHome.z + this.playerOffset.z,
     );
+
+    // Strafe roll — camera leans slightly into lateral motion (max ~2.3°).
+    const targetRoll = -(this.playerVelocity.x / Math.max(targetSpeed, 0.1)) * 0.04;
+    this.cameraRoll += (targetRoll - this.cameraRoll) * Math.min(1, deltaSeconds * 8);
+    this.camera.rotation.z = this.cameraRoll;
+  }
+
+  private triggerCameraShake(amplitude: number, seconds: number): void {
+    // Layered shakes use max amplitude / max remaining time, so multiple events stack cleanly.
+    this.cameraShakeAmplitude = Math.max(this.cameraShakeAmplitude * (this.cameraShakeSeconds / 0.25 || 0), amplitude);
+    this.cameraShakeSeconds = Math.max(this.cameraShakeSeconds, seconds);
   }
 
   private updateMission(deltaSeconds: number): void {
@@ -1532,6 +1663,9 @@ export class DinoOutpostGame {
     this.weapon.cooldownSeconds = weapon.fireIntervalSeconds;
     this.weaponKickSeconds = 0.09;
     this.pitch = Math.max(-0.58, this.pitch - weapon.recoil * (this.weapon.isScoped ? 0.35 : 1));
+    // Per-shot camera shake — heavier weapons shake more. Scope dampens it.
+    const fireShake = (weapon.id === "shotgun" ? 0.045 : weapon.id === "marksman" ? 0.028 : 0.018) * (this.weapon.isScoped ? 0.4 : 1);
+    this.triggerCameraShake(fireShake, 0.12);
     this.camera.rotation.x = this.pitch;
     this.playTone((weapon.id === "shotgun" ? 150 : weapon.id === "marksman" ? 215 : 255) + Math.random() * 45, 0.04, "square");
 
@@ -1563,6 +1697,9 @@ export class DinoOutpostGame {
         this.createEliminationBurst(end, isCritical);
         this.playTone(740, 0.12, "triangle");
         this.notice(`Neutralized +${score + comboBonus} x${this.combo}`, 1);
+        // Kill shake — heavier when crit or against a big enemy.
+        const heavy = tuning.enemies[target.enemy.kind].bodyStyle === "heavy";
+        this.triggerCameraShake(isCritical ? 0.06 : heavy ? 0.05 : 0.035, 0.22);
       }
     }
   }
